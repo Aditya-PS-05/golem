@@ -272,7 +272,6 @@ impl Default for TypeMapper {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     #[cfg(feature = "grpc")]

@@ -314,7 +314,6 @@ fn default_wit_output() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     
     #[test]
     fn test_golem_yaml_serialization() {

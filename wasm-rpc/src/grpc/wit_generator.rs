@@ -297,9 +297,7 @@ impl Default for WitGenerator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::grpc::{ProtobufParser, TypeMapper, NameResolver};
-
+    
     #[test]
     #[cfg(feature = "grpc")]
     fn test_generate_simple_service() {
