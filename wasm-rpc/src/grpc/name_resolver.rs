@@ -285,7 +285,6 @@ impl Default for NameResolver {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_to_kebab_case() {
