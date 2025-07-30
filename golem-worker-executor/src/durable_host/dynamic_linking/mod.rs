@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::durable_host::dynamic_linking::wasm_rpc::dynamic_wasm_rpc_link;
+use crate::durable_host::dynamic_linking::dynamic_grpc::dynamic_grpc_link;
 use crate::durable_host::DurableWorkerCtx;
 use crate::workerctx::{DynamicLinking, WorkerCtx};
 use async_trait::async_trait;
@@ -24,6 +25,7 @@ use wasmtime::component::{Component, Linker};
 use wasmtime::Engine;
 
 mod wasm_rpc;
+mod dynamic_grpc;
 
 #[async_trait]
 impl<Ctx: WorkerCtx + HostWasmRpc + HostFutureInvokeResult> DynamicLinking<Ctx>
@@ -54,6 +56,9 @@ impl<Ctx: WorkerCtx + HostWasmRpc + HostFutureInvokeResult> DynamicLinking<Ctx>
                     {
                         Some(DynamicLinkedInstance::WasmRpc(rpc_metadata)) => {
                             dynamic_wasm_rpc_link(&name, rpc_metadata, engine, &mut root, inst)?;
+                        }
+                        Some(DynamicLinkedInstance::Grpc(grpc_metadata)) => {
+                            dynamic_grpc_link(&name, grpc_metadata, engine, &mut root, inst)?;
                         }
                         None => {
                             // Instance not marked for dynamic linking
