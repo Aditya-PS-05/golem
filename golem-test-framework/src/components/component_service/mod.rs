@@ -1263,19 +1263,24 @@ fn to_http_dynamic_linking(
     Some(golem_client::model::DynamicLinking {
         dynamic_linking: dynamic_linking
             .iter()
-            .map(|(k, v)| {
-                (
-                    k.clone(),
-                    match v {
-                        DynamicLinkedInstance::WasmRpc(link) => {
+            .filter_map(|(k, v)| {
+                match v {
+                    DynamicLinkedInstance::WasmRpc(link) => {
+                        Some((
+                            k.clone(),
                             golem_client::model::DynamicLinkedInstance::WasmRpc(
                                 golem_client::model::DynamicLinkedWasmRpc {
                                     targets: link.targets.clone(),
                                 },
                             )
-                        }
-                    },
-                )
+                        ))
+                    }
+                    DynamicLinkedInstance::Grpc(_grpc_link) => {
+                        // TODO: Add Grpc support to golem-client model generation
+                        // For now, skip gRPC dynamic linking in tests
+                        None
+                    }
+                }
             })
             .collect(),
     })

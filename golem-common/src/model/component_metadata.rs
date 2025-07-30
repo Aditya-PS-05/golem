@@ -14,7 +14,7 @@
 
 use crate::model::agent::AgentType;
 use crate::model::base64::Base64;
-use crate::model::ComponentType;
+use crate::model::{ComponentType, Empty};
 use crate::{virtual_exports, SafeDisplay};
 use bincode::{Decode, Encode};
 use golem_wasm_ast::analysis::wit_parser::WitAnalysisContext;
@@ -82,6 +82,7 @@ impl Debug for ComponentMetadata {
 #[serde(tag = "type")]
 pub enum DynamicLinkedInstance {
     WasmRpc(DynamicLinkedWasmRpc),
+    Grpc(DynamicLinkedGrpc),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -125,6 +126,108 @@ impl Display for WasmRpcTarget {
             self.interface_name, self.component_name, self.component_type
         )
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "poem", oai(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
+pub struct DynamicLinkedGrpc {
+    /// Maps service names within the dynamic linked interface to target information
+    pub targets: HashMap<String, GrpcTarget>,
+}
+
+impl DynamicLinkedGrpc {
+    pub fn target(&self, service_name: &str) -> Result<GrpcTarget, String> {
+        self.targets.get(service_name).cloned().ok_or_else(|| {
+            format!("Service '{service_name}' not found in dynamic linked gRPC interface")
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "poem", oai(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
+pub struct GrpcTarget {
+    /// gRPC service endpoint URL
+    pub endpoint: String,
+    /// Protocol buffer package name  
+    pub package: String,
+    /// gRPC service name
+    pub service_name: String,
+    /// Version of the service
+    pub version: String,
+    /// Authentication configuration
+    pub auth: Option<GrpcAuthConfig>,
+    /// Enable TLS (default: true)
+    #[serde(default = "default_tls")]
+    pub tls: bool,
+    /// Connection timeout in seconds (default: 30)
+    #[serde(default = "default_timeout")]
+    pub timeout: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Union))]
+#[cfg_attr(feature = "poem", oai(discriminator_name = "type", one_of = true))]
+#[serde(tag = "type")]
+pub enum GrpcAuthConfig {
+    #[serde(rename = "bearer")]
+    Bearer(BearerAuth),
+    
+    #[serde(rename = "basic")]
+    Basic(BasicAuth),
+    
+    #[serde(rename = "api-key")]
+    ApiKey(ApiKeyAuth),
+    
+    #[serde(rename = "none")]
+    None(Empty),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[serde(rename_all = "camelCase")]
+pub struct BearerAuth {
+    pub token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[serde(rename_all = "camelCase")]
+pub struct BasicAuth {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[serde(rename_all = "camelCase")]
+pub struct ApiKeyAuth {
+    pub key: String,
+    pub header: String,
+}
+
+impl Display for GrpcTarget {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}::{} @ {} ({})",
+            self.package,
+            self.service_name, 
+            self.endpoint,
+            self.version
+        )
+    }
+}
+
+fn default_tls() -> bool {
+    true
+}
+
+fn default_timeout() -> u64 {
+    30
 }
 
 #[derive(
@@ -577,6 +680,13 @@ mod protobuf {
                     dynamic_linked_instance: Some(
                         golem_api_grpc::proto::golem::component::dynamic_linked_instance::DynamicLinkedInstance::WasmRpc(
                             dynamic_linked_wasm_rpc.into())),
+                },
+                DynamicLinkedInstance::Grpc(_) => {
+                    // gRPC support not yet implemented in protobuf schema
+                    // For now, skip gRPC entries in protobuf conversion
+                    Self {
+                        dynamic_linked_instance: None,
+                    }
                 },
             }
         }
