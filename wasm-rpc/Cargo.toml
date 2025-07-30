@@ -34,6 +34,9 @@ poem-openapi-derive = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 prost = { workspace = true, optional = true }
+protobuf = { version = "3.7.2", optional = true }
+protobuf-parse = { version = "3.7.2", optional = true }
+serde_yaml = { workspace = true, optional = true }
 uuid = { workspace = true }
 url = { workspace = true, optional = true }
 wasmtime = { workspace = true, optional = true }
@@ -44,6 +47,7 @@ wasm-wave = { workspace = true, optional = true }
 proptest = { workspace = true }
 proptest-arbitrary-interop = "0.1.0"
 test-r = { workspace = true }
+tempfile = { workspace = true }
 
 [build-dependencies]
 prost-build = { version = "0.13.5", optional = true }
@@ -59,6 +63,7 @@ host = [
     "json",
     "poem_openapi",
     "protobuf",
+    "grpc",
     "serde",
     "text",
     "typeinfo",
@@ -81,6 +86,8 @@ poem_openapi = [
     "golem-wasm-ast/poem_openapi",
 ]
 protobuf = ["dep:bincode", "dep:serde", "dep:prost", "dep:prost-build", "golem-wasm-ast/protobuf"]
+grpc = ["dep:protobuf", "dep:protobuf-parse", "protobuf", "typeinfo"]
+cli = ["grpc", "dep:serde_yaml", "serde"]
 serde = ["dep:serde"]
 stub = []
 text = ["typeinfo", "dep:wasm-wave", "golem-wasm-ast/wave"]
@@ -91,6 +98,7 @@ wasmtime = [
     "dep:async-recursion",
     "typeinfo",
 ]
+
 
 
 [package.metadata.component]

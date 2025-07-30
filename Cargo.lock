@@ -4009,8 +4009,12 @@ dependencies = [
  "proptest-arbitrary-interop",
  "prost",
  "prost-build",
+ "protobuf 3.7.2",
+ "protobuf-parse",
  "serde",
  "serde_json",
+ "serde_yaml",
+ "tempfile",
  "test-r",
  "url",
  "uuid",
@@ -6894,6 +6898,22 @@ dependencies = [
  "once_cell",
  "protobuf-support",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "protobuf-parse"
+version = "3.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4aeaa1f2460f1d348eeaeed86aea999ce98c1bded6f089ff8514c9d9dbdc973"
+dependencies = [
+ "anyhow",
+ "indexmap 2.9.0",
+ "log",
+ "protobuf 3.7.2",
+ "protobuf-support",
+ "tempfile",
+ "thiserror 1.0.69",
+ "which",
 ]
 
 [[package]]
