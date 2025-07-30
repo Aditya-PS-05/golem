@@ -61,6 +61,10 @@ mod value_and_type;
 #[cfg(feature = "wasmtime")]
 pub mod wasmtime;
 
+/// gRPC integration for Golem
+#[cfg(feature = "grpc")]
+pub mod grpc;
+
 #[cfg(any(feature = "host-bindings", feature = "stub"))]
 use crate::builder::WitValueBuilder;
 
@@ -186,6 +190,9 @@ pub use text::{parse_value_and_type, print_value_and_type};
 
 #[cfg(feature = "typeinfo")]
 pub use value_and_type::*;
+
+#[cfg(feature = "grpc")]
+pub use grpc::{ProtoToWitConverter, ServiceMetadata, ServiceInfo, MethodInfo, TypeInfo, FieldInfo};
 
 #[cfg(all(feature = "arbitrary", feature = "host-bindings"))]
 impl arbitrary::Arbitrary<'_> for Uri {
