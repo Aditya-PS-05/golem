@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::durable_host::dynamic_linking::wasm_rpc::dynamic_wasm_rpc_link;
 use crate::durable_host::dynamic_linking::dynamic_grpc::dynamic_grpc_link;
+use crate::durable_host::dynamic_linking::wasm_rpc::dynamic_wasm_rpc_link;
 use crate::durable_host::DurableWorkerCtx;
 use crate::workerctx::{DynamicLinking, WorkerCtx};
 use async_trait::async_trait;
@@ -24,8 +24,8 @@ use wasmtime::component::types::ComponentItem;
 use wasmtime::component::{Component, Linker};
 use wasmtime::Engine;
 
-mod wasm_rpc;
 mod dynamic_grpc;
+mod wasm_rpc;
 
 #[async_trait]
 impl<Ctx: WorkerCtx + HostWasmRpc + HostFutureInvokeResult> DynamicLinking<Ctx>

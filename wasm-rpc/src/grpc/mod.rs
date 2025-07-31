@@ -13,32 +13,32 @@
 // limitations under the License.
 
 //! gRPC integration module for Golem
-//! 
-//! This module provides functionality to convert Protocol Buffers v3 (proto3) 
+//!
+//! This module provides functionality to convert Protocol Buffers v3 (proto3)
 //! with gRPC service definitions to idiomatic WIT (WebAssembly Interface Types).
 
-pub mod proto_parser;
-pub mod wit_generator;
-pub mod type_mapper;
-pub mod name_resolver;
 pub mod error;
+pub mod name_resolver;
+pub mod proto_parser;
+pub mod type_mapper;
+pub mod wit_generator;
 
 #[cfg(feature = "cli")]
 pub mod cli;
 
-pub use proto_parser::ProtobufParser;
-pub use wit_generator::WitGenerator;
-pub use type_mapper::TypeMapper;
-pub use name_resolver::NameResolver;
 pub use error::{GrpcError, GrpcResult};
+pub use name_resolver::NameResolver;
+pub use proto_parser::ProtobufParser;
+pub use type_mapper::TypeMapper;
+pub use wit_generator::WitGenerator;
 
 #[cfg(feature = "cli")]
-pub use cli::{GrpcCliManager, GrpcDependencyConfig, GolemYamlConfig, GrpcAuthConfig};
+pub use cli::{GolemYamlConfig, GrpcAuthConfig, GrpcCliManager, GrpcDependencyConfig};
 
 use std::collections::HashMap;
 
 #[cfg(feature = "grpc")]
-use protobuf::descriptor::{FileDescriptorProto, field_descriptor_proto::Label};
+use protobuf::descriptor::{field_descriptor_proto::Label, FileDescriptorProto};
 
 /// Main entry point for converting protobuf definitions to WIT
 pub struct ProtoToWitConverter {
@@ -67,7 +67,7 @@ impl ProtoToWitConverter {
     ) -> GrpcResult<String> {
         // Parse the protobuf definition
         let proto_desc = self.parser.parse(proto_content)?;
-        
+
         // Generate WIT from protobuf descriptor
         let wit_package = self.generator.generate_wit_package(
             &proto_desc,
@@ -76,15 +76,12 @@ impl ProtoToWitConverter {
             &mut self.type_mapper,
             &self.name_resolver,
         )?;
-        
+
         Ok(wit_package)
     }
 
     /// Extract gRPC service metadata for runtime stub generation
-    pub fn extract_service_metadata(
-        &mut self,
-        proto_content: &str,
-    ) -> GrpcResult<ServiceMetadata> {
+    pub fn extract_service_metadata(&mut self, proto_content: &str) -> GrpcResult<ServiceMetadata> {
         let proto_desc = self.parser.parse(proto_content)?;
         Ok(ServiceMetadata::from_descriptor(&proto_desc))
     }
@@ -138,57 +135,75 @@ impl ServiceMetadata {
         // Extract service information
         for service in &descriptor.service {
             let mut methods = HashMap::new();
-            
+
             for method in &service.method {
-                methods.insert(method.name().to_string(), MethodInfo {
-                    name: method.name().to_string(),
-                    input_type: method.input_type().to_string(),
-                    output_type: method.output_type().to_string(),
-                    client_streaming: method.client_streaming(),
-                    server_streaming: method.server_streaming(),
-                });
+                methods.insert(
+                    method.name().to_string(),
+                    MethodInfo {
+                        name: method.name().to_string(),
+                        input_type: method.input_type().to_string(),
+                        output_type: method.output_type().to_string(),
+                        client_streaming: method.client_streaming(),
+                        server_streaming: method.server_streaming(),
+                    },
+                );
             }
-            
-            services.insert(service.name().to_string(), ServiceInfo {
-                name: service.name().to_string(),
-                methods,
-            });
+
+            services.insert(
+                service.name().to_string(),
+                ServiceInfo {
+                    name: service.name().to_string(),
+                    methods,
+                },
+            );
         }
 
         // Extract type information
         for message in &descriptor.message_type {
             let mut fields = Vec::new();
-            
+
             for field in &message.field {
                 fields.push(FieldInfo {
                     name: field.name().to_string(),
-                    field_type: if field.type_name().is_empty() { String::new() } else { field.type_name().to_string() },
+                    field_type: if field.type_name().is_empty() {
+                        String::new()
+                    } else {
+                        field.type_name().to_string()
+                    },
                     number: field.number(),
                     optional: field.label() == Label::LABEL_OPTIONAL,
                     repeated: field.label() == Label::LABEL_REPEATED,
                 });
             }
-            
-            types.insert(message.name().to_string(), TypeInfo {
-                name: message.name().to_string(),
-                fields,
-                is_enum: false,
-                enum_values: Vec::new(),
-            });
+
+            types.insert(
+                message.name().to_string(),
+                TypeInfo {
+                    name: message.name().to_string(),
+                    fields,
+                    is_enum: false,
+                    enum_values: Vec::new(),
+                },
+            );
         }
 
         // Extract enum information
         for enum_type in &descriptor.enum_type {
-            let enum_values = enum_type.value.iter()
+            let enum_values = enum_type
+                .value
+                .iter()
                 .map(|v| v.name().to_string())
                 .collect();
-                
-            types.insert(enum_type.name().to_string(), TypeInfo {
-                name: enum_type.name().to_string(),
-                fields: Vec::new(),
-                is_enum: true,
-                enum_values,
-            });
+
+            types.insert(
+                enum_type.name().to_string(),
+                TypeInfo {
+                    name: enum_type.name().to_string(),
+                    fields: Vec::new(),
+                    is_enum: true,
+                    enum_values,
+                },
+            );
         }
 
         Self { services, types }

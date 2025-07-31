@@ -175,13 +175,13 @@ pub struct GrpcTarget {
 pub enum GrpcAuthConfig {
     #[serde(rename = "bearer")]
     Bearer(BearerAuth),
-    
+
     #[serde(rename = "basic")]
     Basic(BasicAuth),
-    
+
     #[serde(rename = "api-key")]
     ApiKey(ApiKeyAuth),
-    
+
     #[serde(rename = "none")]
     None(Empty),
 }
@@ -214,10 +214,7 @@ impl Display for GrpcTarget {
         write!(
             f,
             "{}::{} @ {} ({})",
-            self.package,
-            self.service_name, 
-            self.endpoint,
-            self.version
+            self.package, self.service_name, self.endpoint, self.version
         )
     }
 }
@@ -525,9 +522,11 @@ fn add_virtual_exports(exports: &mut Vec<AnalysedExport>) {
 mod protobuf {
     use crate::model::base64::Base64;
     use crate::model::component_metadata::{
-        ComponentMetadata, DynamicLinkedInstance, DynamicLinkedWasmRpc, LinearMemory,
-        ProducerField, Producers, VersionedName, WasmRpcTarget,
+        ComponentMetadata, DynamicLinkedInstance, DynamicLinkedWasmRpc, DynamicLinkedGrpc, 
+        LinearMemory, ProducerField, Producers, VersionedName, WasmRpcTarget, GrpcTarget,
+        GrpcAuthConfig, BearerAuth, BasicAuth, ApiKeyAuth,
     };
+    use crate::model::Empty;
     use std::collections::HashMap;
 
     impl From<golem_api_grpc::proto::golem::component::VersionedName> for VersionedName {
@@ -681,12 +680,10 @@ mod protobuf {
                         golem_api_grpc::proto::golem::component::dynamic_linked_instance::DynamicLinkedInstance::WasmRpc(
                             dynamic_linked_wasm_rpc.into())),
                 },
-                DynamicLinkedInstance::Grpc(_) => {
-                    // gRPC support not yet implemented in protobuf schema
-                    // For now, skip gRPC entries in protobuf conversion
-                    Self {
-                        dynamic_linked_instance: None,
-                    }
+                DynamicLinkedInstance::Grpc(dynamic_linked_grpc) => Self {
+                    dynamic_linked_instance: Some(
+                        golem_api_grpc::proto::golem::component::dynamic_linked_instance::DynamicLinkedInstance::Grpc(
+                            dynamic_linked_grpc.into())),
                 },
             }
         }
@@ -702,6 +699,7 @@ mod protobuf {
         ) -> Result<Self, Self::Error> {
             match value.dynamic_linked_instance {
                 Some(golem_api_grpc::proto::golem::component::dynamic_linked_instance::DynamicLinkedInstance::WasmRpc(dynamic_linked_wasm_rpc)) => Ok(Self::WasmRpc(dynamic_linked_wasm_rpc.try_into()?)),
+                Some(golem_api_grpc::proto::golem::component::dynamic_linked_instance::DynamicLinkedInstance::Grpc(dynamic_linked_grpc)) => Ok(Self::Grpc(dynamic_linked_grpc.try_into()?)),
                 None => Err("Missing dynamic_linked_instance".to_string()),
             }
         }
@@ -759,6 +757,175 @@ mod protobuf {
                 interface_name: value.interface_name,
                 component_name: value.component_name,
                 component_type: value.component_type.try_into()?,
+            })
+        }
+    }
+
+    impl From<DynamicLinkedGrpc> for golem_api_grpc::proto::golem::component::DynamicLinkedGrpc {
+        fn from(value: DynamicLinkedGrpc) -> Self {
+            Self {
+                targets: value
+                    .targets
+                    .into_iter()
+                    .map(|(key, target)| (key, target.into()))
+                    .collect(),
+            }
+        }
+    }
+
+    impl TryFrom<golem_api_grpc::proto::golem::component::DynamicLinkedGrpc>
+        for DynamicLinkedGrpc
+    {
+        type Error = String;
+
+        fn try_from(
+            value: golem_api_grpc::proto::golem::component::DynamicLinkedGrpc,
+        ) -> Result<Self, Self::Error> {
+            Ok(Self {
+                targets: value
+                    .targets
+                    .into_iter()
+                    .map(|(key, target)| target.try_into().map(|target| (key, target)))
+                    .collect::<Result<HashMap<_, _>, _>>()?,
+            })
+        }
+    }
+
+    impl From<GrpcTarget> for golem_api_grpc::proto::golem::component::GrpcTarget {
+        fn from(value: GrpcTarget) -> Self {
+            Self {
+                endpoint: value.endpoint,
+                package: value.package,
+                service_name: value.service_name,
+                version: value.version,
+                auth: value.auth.map(|auth| auth.into()),
+                tls: value.tls,
+                timeout: value.timeout,
+            }
+        }
+    }
+
+    impl TryFrom<golem_api_grpc::proto::golem::component::GrpcTarget> for GrpcTarget {
+        type Error = String;
+
+        fn try_from(
+            value: golem_api_grpc::proto::golem::component::GrpcTarget,
+        ) -> Result<Self, Self::Error> {
+            Ok(Self {
+                endpoint: value.endpoint,
+                package: value.package,
+                service_name: value.service_name,
+                version: value.version,
+                auth: value.auth.map(|auth| auth.try_into()).transpose()?,
+                tls: value.tls,
+                timeout: value.timeout,
+            })
+        }
+    }
+
+    impl From<GrpcAuthConfig> for golem_api_grpc::proto::golem::component::GrpcAuthConfig {
+        fn from(value: GrpcAuthConfig) -> Self {
+            match value {
+                GrpcAuthConfig::Bearer(bearer) => Self {
+                    auth_config: Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::Bearer(bearer.into())),
+                },
+                GrpcAuthConfig::Basic(basic) => Self {
+                    auth_config: Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::Basic(basic.into())),
+                },
+                GrpcAuthConfig::ApiKey(api_key) => Self {
+                    auth_config: Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::ApiKey(api_key.into())),
+                },
+                GrpcAuthConfig::None(_) => Self {
+                    auth_config: Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::None(golem_api_grpc::proto::golem::component::EmptyAuth {})),
+                },
+            }
+        }
+    }
+
+    impl TryFrom<golem_api_grpc::proto::golem::component::GrpcAuthConfig> for GrpcAuthConfig {
+        type Error = String;
+
+        fn try_from(
+            value: golem_api_grpc::proto::golem::component::GrpcAuthConfig,
+        ) -> Result<Self, Self::Error> {
+            match value.auth_config {
+                Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::Bearer(bearer)) => {
+                    Ok(GrpcAuthConfig::Bearer(bearer.try_into()?))
+                },
+                Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::Basic(basic)) => {
+                    Ok(GrpcAuthConfig::Basic(basic.try_into()?))
+                },
+                Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::ApiKey(api_key)) => {
+                    Ok(GrpcAuthConfig::ApiKey(api_key.try_into()?))
+                },
+                Some(golem_api_grpc::proto::golem::component::grpc_auth_config::AuthConfig::None(_)) => {
+                    Ok(GrpcAuthConfig::None(Empty {}))
+                },
+                None => Err("Missing auth_config".to_string()),
+            }
+        }
+    }
+
+    impl From<BearerAuth> for golem_api_grpc::proto::golem::component::BearerAuth {
+        fn from(value: BearerAuth) -> Self {
+            Self {
+                token: value.token,
+            }
+        }
+    }
+
+    impl TryFrom<golem_api_grpc::proto::golem::component::BearerAuth> for BearerAuth {
+        type Error = String;
+
+        fn try_from(
+            value: golem_api_grpc::proto::golem::component::BearerAuth,
+        ) -> Result<Self, Self::Error> {
+            Ok(Self {
+                token: value.token,
+            })
+        }
+    }
+
+    impl From<BasicAuth> for golem_api_grpc::proto::golem::component::BasicAuth {
+        fn from(value: BasicAuth) -> Self {
+            Self {
+                username: value.username,
+                password: value.password,
+            }
+        }
+    }
+
+    impl TryFrom<golem_api_grpc::proto::golem::component::BasicAuth> for BasicAuth {
+        type Error = String;
+
+        fn try_from(
+            value: golem_api_grpc::proto::golem::component::BasicAuth,
+        ) -> Result<Self, Self::Error> {
+            Ok(Self {
+                username: value.username,
+                password: value.password,
+            })
+        }
+    }
+
+    impl From<ApiKeyAuth> for golem_api_grpc::proto::golem::component::ApiKeyAuth {
+        fn from(value: ApiKeyAuth) -> Self {
+            Self {
+                key: value.key,
+                header: value.header,
+            }
+        }
+    }
+
+    impl TryFrom<golem_api_grpc::proto::golem::component::ApiKeyAuth> for ApiKeyAuth {
+        type Error = String;
+
+        fn try_from(
+            value: golem_api_grpc::proto::golem::component::ApiKeyAuth,
+        ) -> Result<Self, Self::Error> {
+            Ok(Self {
+                key: value.key,
+                header: value.header,
             })
         }
     }

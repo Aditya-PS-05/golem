@@ -105,7 +105,7 @@ impl<'a> IncludedMigrationsDir<'a> {
     }
 }
 
-impl<'a> Migrations for IncludedMigrationsDir<'a> {
+impl Migrations for IncludedMigrationsDir<'_> {
     type Output<'b>
         = SpecificIncludedMigrationsDir<'b>
     where
