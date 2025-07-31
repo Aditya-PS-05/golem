@@ -7,6 +7,7 @@ import "golem/component/component_type.proto";
 message DynamicLinkedInstance {
   oneof dynamic_linked_instance {
     DynamicLinkedWasmRpc wasm_rpc = 1;
+    DynamicLinkedGrpc grpc = 2;
   }
 }
 
@@ -18,4 +19,45 @@ message WasmRpcTarget {
   string interface_name = 1;
   string component_name = 2;
   ComponentType component_type = 3;
+}
+
+message DynamicLinkedGrpc {
+  map<string, GrpcTarget> targets = 1;
+}
+
+message GrpcTarget {
+  string endpoint = 1;
+  string package = 2;
+  string service_name = 3;
+  string version = 4;
+  optional GrpcAuthConfig auth = 5;
+  bool tls = 6;
+  uint64 timeout = 7;
+}
+
+message GrpcAuthConfig {
+  oneof auth_config {
+    BearerAuth bearer = 1;
+    BasicAuth basic = 2;
+    ApiKeyAuth api_key = 3;
+    EmptyAuth none = 4;
+  }
+}
+
+message BearerAuth {
+  string token = 1;
+}
+
+message BasicAuth {
+  string username = 1;
+  string password = 2;
+}
+
+message ApiKeyAuth {
+  string key = 1;
+  string header = 2;
+}
+
+message EmptyAuth {
+  // Empty message for no authentication
 }

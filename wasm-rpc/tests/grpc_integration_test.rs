@@ -3,8 +3,8 @@
 #[cfg(feature = "grpc")]
 #[cfg(test)]
 mod grpc_tests {
-    use golem_wasm_rpc::grpc::{ProtoToWitConverter};
-    
+    use golem_wasm_rpc::grpc::ProtoToWitConverter;
+
     #[test]
     fn test_simple_proto_to_wit_conversion() {
         let proto_content = r#"
@@ -27,12 +27,16 @@ mod grpc_tests {
 
         let mut converter = ProtoToWitConverter::new();
         let result = converter.convert_proto_to_wit(proto_content, "test.v1", "1.0.0");
-        
-        assert!(result.is_ok(), "Proto to WIT conversion failed: {:?}", result.err());
-        
+
+        assert!(
+            result.is_ok(),
+            "Proto to WIT conversion failed: {:?}",
+            result.err()
+        );
+
         let wit_content = result.unwrap();
         println!("Generated WIT:\n{}", wit_content);
-        
+
         // Verify the generated WIT contains expected elements
         assert!(wit_content.contains("package test:v1@1.0.0"));
         assert!(wit_content.contains("interface types"));
@@ -43,7 +47,7 @@ mod grpc_tests {
         assert!(wit_content.contains("result<hello-response, grpc-error>"));
         assert!(wit_content.contains("world hello-service-api"));
     }
-    
+
     #[test]
     fn test_streaming_methods_conversion() {
         let proto_content = r#"
@@ -68,18 +72,24 @@ mod grpc_tests {
 
         let mut converter = ProtoToWitConverter::new();
         let result = converter.convert_proto_to_wit(proto_content, "stream.v1", "1.0.0");
-        
-        assert!(result.is_ok(), "Proto to WIT conversion failed: {:?}", result.err());
-        
+
+        assert!(
+            result.is_ok(),
+            "Proto to WIT conversion failed: {:?}",
+            result.err()
+        );
+
         let wit_content = result.unwrap();
         println!("Generated streaming WIT:\n{}", wit_content);
-        
+
         // Check that streaming methods are properly generated
         assert!(wit_content.contains("client-streaming: func(requests: list<stream-request>)"));
-        assert!(wit_content.contains("server-streaming: func(request: stream-request) -> result<list<stream-response>"));
+        assert!(wit_content.contains(
+            "server-streaming: func(request: stream-request) -> result<list<stream-response>"
+        ));
         assert!(wit_content.contains("bidirectional-streaming: func(requests: list<stream-request>) -> result<list<stream-response>"));
     }
-    
+
     #[test]
     fn test_enum_conversion() {
         let proto_content = r#"
@@ -105,12 +115,16 @@ mod grpc_tests {
 
         let mut converter = ProtoToWitConverter::new();
         let result = converter.convert_proto_to_wit(proto_content, "enum_test.v1", "1.0.0");
-        
-        assert!(result.is_ok(), "Proto to WIT conversion failed: {:?}", result.err());
-        
+
+        assert!(
+            result.is_ok(),
+            "Proto to WIT conversion failed: {:?}",
+            result.err()
+        );
+
         let wit_content = result.unwrap();
         println!("Generated enum WIT:\n{}", wit_content);
-        
+
         // Check that enums are properly converted
         assert!(wit_content.contains("enum status"));
         assert!(wit_content.contains("unknown"));

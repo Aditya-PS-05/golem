@@ -18,7 +18,7 @@ use std::collections::HashMap;
 #[cfg(feature = "grpc")]
 use protobuf::descriptor::{
     field_descriptor_proto::{Label, Type},
-    FieldDescriptorProto, DescriptorProto, EnumDescriptorProto,
+    DescriptorProto, EnumDescriptorProto, FieldDescriptorProto,
 };
 
 /// Maps protobuf types to their WIT equivalents
@@ -41,38 +41,44 @@ impl TypeMapper {
             Type::TYPE_BOOL => "bool",
             Type::TYPE_STRING => "string",
             Type::TYPE_BYTES => "list<u8>",
-            
+
             // Integer types
             Type::TYPE_INT32 | Type::TYPE_SINT32 | Type::TYPE_SFIXED32 => "s32",
             Type::TYPE_INT64 | Type::TYPE_SINT64 | Type::TYPE_SFIXED64 => "s64",
             Type::TYPE_UINT32 | Type::TYPE_FIXED32 => "u32",
             Type::TYPE_UINT64 | Type::TYPE_FIXED64 => "u64",
-            
+
             // Floating point types
             Type::TYPE_FLOAT => "float32",
             Type::TYPE_DOUBLE => "float64",
-            
+
             // Complex types that need special handling
-            Type::TYPE_MESSAGE => return Err(GrpcError::TypeMappingError {
-                proto_type: "message".to_string(),
-                message: "Message types should be handled separately".to_string(),
-            }),
-            Type::TYPE_ENUM => return Err(GrpcError::TypeMappingError {
-                proto_type: "enum".to_string(),
-                message: "Enum types should be handled separately".to_string(),
-            }),
-            Type::TYPE_GROUP => return Err(GrpcError::UnsupportedFeature(
-                "GROUP type is deprecated and not supported".to_string()
-            )),
+            Type::TYPE_MESSAGE => {
+                return Err(GrpcError::TypeMappingError {
+                    proto_type: "message".to_string(),
+                    message: "Message types should be handled separately".to_string(),
+                })
+            }
+            Type::TYPE_ENUM => {
+                return Err(GrpcError::TypeMappingError {
+                    proto_type: "enum".to_string(),
+                    message: "Enum types should be handled separately".to_string(),
+                })
+            }
+            Type::TYPE_GROUP => {
+                return Err(GrpcError::UnsupportedFeature(
+                    "GROUP type is deprecated and not supported".to_string(),
+                ))
+            }
         };
-        
+
         Ok(wit_type)
     }
 
     #[cfg(not(feature = "grpc"))]
     pub fn map_scalar_type(&self, _proto_type: i32) -> GrpcResult<&'static str> {
         Err(GrpcError::UnsupportedFeature(
-            "gRPC support requires the 'grpc' feature to be enabled".to_string()
+            "gRPC support requires the 'grpc' feature to be enabled".to_string(),
         ))
     }
 
@@ -115,7 +121,7 @@ impl TypeMapper {
         _name_resolver: &crate::grpc::NameResolver,
     ) -> GrpcResult<String> {
         Err(GrpcError::UnsupportedFeature(
-            "gRPC support requires the 'grpc' feature to be enabled".to_string()
+            "gRPC support requires the 'grpc' feature to be enabled".to_string(),
         ))
     }
 
@@ -143,11 +149,7 @@ impl TypeMapper {
             // Handle empty records
             format!("record {} {{}}", record_name)
         } else {
-            format!(
-                "record {} {{\n{}\n}}",
-                record_name,
-                fields.join("\n")
-            )
+            format!("record {} {{\n{}\n}}", record_name, fields.join("\n"))
         };
 
         Ok(record_def)
@@ -160,7 +162,7 @@ impl TypeMapper {
         _name_resolver: &crate::grpc::NameResolver,
     ) -> GrpcResult<String> {
         Err(GrpcError::UnsupportedFeature(
-            "gRPC support requires the 'grpc' feature to be enabled".to_string()
+            "gRPC support requires the 'grpc' feature to be enabled".to_string(),
         ))
     }
 
@@ -184,15 +186,12 @@ impl TypeMapper {
         }
 
         let enum_def = if variants.is_empty() {
-            return Err(GrpcError::InvalidProtobuf(
-                format!("Enum '{}' has no values", enum_desc.name())
-            ));
+            return Err(GrpcError::InvalidProtobuf(format!(
+                "Enum '{}' has no values",
+                enum_desc.name()
+            )));
         } else {
-            format!(
-                "enum {} {{\n{}\n}}",
-                enum_name,
-                variants.join("\n")
-            )
+            format!("enum {} {{\n{}\n}}", enum_name, variants.join("\n"))
         };
 
         Ok(enum_def)
@@ -205,7 +204,7 @@ impl TypeMapper {
         _name_resolver: &crate::grpc::NameResolver,
     ) -> GrpcResult<String> {
         Err(GrpcError::UnsupportedFeature(
-            "gRPC support requires the 'grpc' feature to be enabled".to_string()
+            "gRPC support requires the 'grpc' feature to be enabled".to_string(),
         ))
     }
 
@@ -227,15 +226,12 @@ impl TypeMapper {
         }
 
         let variant_def = if cases.is_empty() {
-            return Err(GrpcError::InvalidProtobuf(
-                format!("Oneof '{}' has no fields", oneof_name)
-            ));
+            return Err(GrpcError::InvalidProtobuf(format!(
+                "Oneof '{}' has no fields",
+                oneof_name
+            )));
         } else {
-            format!(
-                "variant {} {{\n{}\n}}",
-                variant_name,
-                cases.join("\n")
-            )
+            format!("variant {} {{\n{}\n}}", variant_name, cases.join("\n"))
         };
 
         Ok(variant_def)
@@ -249,7 +245,7 @@ impl TypeMapper {
         _name_resolver: &crate::grpc::NameResolver,
     ) -> GrpcResult<String> {
         Err(GrpcError::UnsupportedFeature(
-            "gRPC support requires the 'grpc' feature to be enabled".to_string()
+            "gRPC support requires the 'grpc' feature to be enabled".to_string(),
         ))
     }
 
@@ -277,23 +273,32 @@ mod tests {
     #[cfg(feature = "grpc")]
     fn test_scalar_type_mapping() {
         let mapper = TypeMapper::new();
-        
+
         assert_eq!(mapper.map_scalar_type(Type::TYPE_BOOL).unwrap(), "bool");
         assert_eq!(mapper.map_scalar_type(Type::TYPE_STRING).unwrap(), "string");
         assert_eq!(mapper.map_scalar_type(Type::TYPE_INT32).unwrap(), "s32");
         assert_eq!(mapper.map_scalar_type(Type::TYPE_UINT64).unwrap(), "u64");
         assert_eq!(mapper.map_scalar_type(Type::TYPE_FLOAT).unwrap(), "float32");
-        assert_eq!(mapper.map_scalar_type(Type::TYPE_DOUBLE).unwrap(), "float64");
-        assert_eq!(mapper.map_scalar_type(Type::TYPE_BYTES).unwrap(), "list<u8>");
+        assert_eq!(
+            mapper.map_scalar_type(Type::TYPE_DOUBLE).unwrap(),
+            "float64"
+        );
+        assert_eq!(
+            mapper.map_scalar_type(Type::TYPE_BYTES).unwrap(),
+            "list<u8>"
+        );
     }
 
     #[test]
     #[cfg(feature = "grpc")]
     fn test_unsupported_types() {
         let mapper = TypeMapper::new();
-        
+
         let result = mapper.map_scalar_type(Type::TYPE_GROUP);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), GrpcError::UnsupportedFeature(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            GrpcError::UnsupportedFeature(_)
+        ));
     }
 }

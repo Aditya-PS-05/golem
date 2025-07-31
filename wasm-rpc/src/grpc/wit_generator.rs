@@ -14,8 +14,8 @@
 
 use crate::grpc::{
     error::{GrpcError, GrpcResult, GrpcStatusCode},
-    type_mapper::TypeMapper,
     name_resolver::NameResolver,
+    type_mapper::TypeMapper,
 };
 use std::collections::HashSet;
 
@@ -54,14 +54,16 @@ impl WitGenerator {
 
         // Generate types interface (messages and enums)
         if !descriptor.message_type.is_empty() || !descriptor.enum_type.is_empty() {
-            let types_interface = self.generate_types_interface(descriptor, type_mapper, name_resolver)?;
+            let types_interface =
+                self.generate_types_interface(descriptor, type_mapper, name_resolver)?;
             sections.push(types_interface);
             sections.push(String::new()); // Empty line
         }
 
         // Generate service interfaces
         for service in &descriptor.service {
-            let service_interface = self.generate_service_interface(service, type_mapper, name_resolver)?;
+            let service_interface =
+                self.generate_service_interface(service, type_mapper, name_resolver)?;
             sections.push(service_interface);
             sections.push(String::new()); // Empty line
         }
@@ -85,7 +87,7 @@ impl WitGenerator {
         _name_resolver: &NameResolver,
     ) -> GrpcResult<String> {
         Err(GrpcError::UnsupportedFeature(
-            "gRPC support requires the 'grpc' feature to be enabled".to_string()
+            "gRPC support requires the 'grpc' feature to be enabled".to_string(),
         ))
     }
 
@@ -115,17 +117,21 @@ impl WitGenerator {
 
             // Handle oneof fields as variants
             for oneof in &message.oneof_decl {
-                let oneof_fields: Vec<_> = message.field.iter()
-                    .filter(|f| f.oneof_index.is_some() && 
-                             f.oneof_index.unwrap() as usize == 
-                             message.oneof_decl.iter().position(|o| o == oneof).unwrap())
+                let oneof_fields: Vec<_> = message
+                    .field
+                    .iter()
+                    .filter(|f| {
+                        f.oneof_index.is_some()
+                            && f.oneof_index.unwrap() as usize
+                                == message.oneof_decl.iter().position(|o| o == oneof).unwrap()
+                    })
                     .collect();
-                
+
                 if !oneof_fields.is_empty() {
                     let variant_def = type_mapper.generate_wit_variant_for_oneof(
-                        oneof.name(), 
-                        &oneof_fields, 
-                        name_resolver
+                        oneof.name(),
+                        &oneof_fields,
+                        name_resolver,
                     )?;
                     definitions.push(format!("  {}", variant_def.replace('\n', "\n  ")));
                 }
@@ -140,10 +146,7 @@ impl WitGenerator {
         let grpc_error = GrpcStatusCode::generate_wit_error_variant();
         definitions.push(format!("  {}", grpc_error.replace('\n', "\n  ")));
 
-        let interface = format!(
-            "interface types {{\n{}\n}}",
-            definitions.join("\n\n")
-        );
+        let interface = format!("interface types {{\n{}\n}}", definitions.join("\n\n"));
 
         Ok(interface)
     }
@@ -157,7 +160,7 @@ impl WitGenerator {
         name_resolver: &NameResolver,
     ) -> GrpcResult<String> {
         let interface_name = name_resolver.proto_to_wit_interface_name(service.name());
-        
+
         if self.generated_interfaces.contains(&interface_name) {
             return Err(GrpcError::NameResolutionError {
                 name: interface_name,
@@ -180,7 +183,7 @@ impl WitGenerator {
             let mut type_list: Vec<_> = used_types.into_iter().collect();
             type_list.sort();
             type_list.push("grpc-error".to_string()); // Always include error type
-            
+
             use_statements.push(format!("  use types.{{{}}};", type_list.join(", ")));
         }
 
@@ -192,17 +195,17 @@ impl WitGenerator {
 
         let mut interface_parts = Vec::new();
         interface_parts.push(format!("interface {} {{", interface_name));
-        
+
         if !use_statements.is_empty() {
             interface_parts.extend(use_statements);
             interface_parts.push(String::new()); // Empty line
         }
-        
+
         interface_parts.extend(functions);
         interface_parts.push("}".to_string());
 
         self.generated_interfaces.insert(interface_name);
-        
+
         Ok(interface_parts.join("\n"))
     }
 
@@ -262,23 +265,22 @@ impl WitGenerator {
         name_resolver: &NameResolver,
     ) -> GrpcResult<String> {
         let world_name = if descriptor.service.len() == 1 {
-            format!("{}-api", name_resolver.proto_to_wit_interface_name(descriptor.service[0].name()))
+            format!(
+                "{}-api",
+                name_resolver.proto_to_wit_interface_name(descriptor.service[0].name())
+            )
         } else {
             "grpc-api".to_string()
         };
 
         let mut exports = Vec::new();
-        
+
         for service in &descriptor.service {
             let interface_name = name_resolver.proto_to_wit_interface_name(service.name());
             exports.push(format!("  export {};", interface_name));
         }
 
-        let world = format!(
-            "world {} {{\n{}\n}}",
-            world_name,
-            exports.join("\n")
-        );
+        let world = format!("world {} {{\n{}\n}}", world_name, exports.join("\n"));
 
         Ok(world)
     }
@@ -297,7 +299,7 @@ impl Default for WitGenerator {
 
 #[cfg(test)]
 mod tests {
-    
+
     #[test]
     #[cfg(feature = "grpc")]
     fn test_generate_simple_service() {
@@ -321,18 +323,20 @@ mod tests {
 
         let mut parser = ProtobufParser::new();
         let descriptor = parser.parse(proto_content).unwrap();
-        
+
         let mut generator = WitGenerator::new();
         let mut type_mapper = TypeMapper::new();
         let name_resolver = NameResolver::new();
-        
-        let wit_package = generator.generate_wit_package(
-            &descriptor,
-            "test.v1",
-            "1.0.0",
-            &mut type_mapper,
-            &name_resolver,
-        ).unwrap();
+
+        let wit_package = generator
+            .generate_wit_package(
+                &descriptor,
+                "test.v1",
+                "1.0.0",
+                &mut type_mapper,
+                &name_resolver,
+            )
+            .unwrap();
 
         assert!(wit_package.contains("package test:v1@1.0.0;"));
         assert!(wit_package.contains("interface types"));
@@ -369,22 +373,26 @@ mod tests {
 
         let mut parser = ProtobufParser::new();
         let descriptor = parser.parse(proto_content).unwrap();
-        
+
         let mut generator = WitGenerator::new();
         let mut type_mapper = TypeMapper::new();
         let name_resolver = NameResolver::new();
-        
-        let wit_package = generator.generate_wit_package(
-            &descriptor,
-            "stream.v1",
-            "1.0.0",
-            &mut type_mapper,
-            &name_resolver,
-        ).unwrap();
+
+        let wit_package = generator
+            .generate_wit_package(
+                &descriptor,
+                "stream.v1",
+                "1.0.0",
+                &mut type_mapper,
+                &name_resolver,
+            )
+            .unwrap();
 
         // Check that streaming methods are properly generated
         assert!(wit_package.contains("client-streaming: func(requests: list<stream-request>)"));
-        assert!(wit_package.contains("server-streaming: func(request: stream-request) -> result<list<stream-response>"));
+        assert!(wit_package.contains(
+            "server-streaming: func(request: stream-request) -> result<list<stream-response>"
+        ));
         assert!(wit_package.contains("bidirectional-streaming: func(requests: list<stream-request>) -> result<list<stream-response>"));
     }
 }

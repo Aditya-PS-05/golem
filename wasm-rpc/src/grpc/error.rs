@@ -22,34 +22,28 @@ pub type GrpcResult<T> = Result<T, GrpcError>;
 pub enum GrpcError {
     /// Error parsing protobuf definition
     ParseError(String),
-    
+
     /// Error generating WIT from protobuf
     WitGenerationError(String),
-    
+
     /// Type mapping error
-    TypeMappingError { 
-        proto_type: String, 
-        message: String 
-    },
-    
+    TypeMappingError { proto_type: String, message: String },
+
     /// Name resolution error (conflicts, invalid names, etc.)
-    NameResolutionError {
-        name: String,
-        message: String,
-    },
-    
+    NameResolutionError { name: String, message: String },
+
     /// Invalid protobuf structure
     InvalidProtobuf(String),
-    
+
     /// Unsupported protobuf feature
     UnsupportedFeature(String),
-    
+
     /// IO error during file operations
     IoError(String),
-    
+
     /// Invalid configuration
     InvalidConfiguration(String),
-    
+
     /// Generic error
     Other(String),
 }
@@ -59,7 +53,10 @@ impl fmt::Display for GrpcError {
         match self {
             GrpcError::ParseError(msg) => write!(f, "Parse error: {}", msg),
             GrpcError::WitGenerationError(msg) => write!(f, "WIT generation error: {}", msg),
-            GrpcError::TypeMappingError { proto_type, message } => {
+            GrpcError::TypeMappingError {
+                proto_type,
+                message,
+            } => {
                 write!(f, "Type mapping error for '{}': {}", proto_type, message)
             }
             GrpcError::NameResolutionError { name, message } => {
@@ -135,7 +132,7 @@ impl GrpcStatusCode {
     /// Generate the standard gRPC error variant definition for WIT
     pub fn generate_wit_error_variant() -> String {
         let mut variants = Vec::new();
-        
+
         for code in [
             GrpcStatusCode::Cancelled,
             GrpcStatusCode::Unknown,
@@ -155,9 +152,9 @@ impl GrpcStatusCode {
             GrpcStatusCode::Unauthenticated,
         ] {
             match code {
-                GrpcStatusCode::InvalidArgument 
-                | GrpcStatusCode::FailedPrecondition 
-                | GrpcStatusCode::OutOfRange 
+                GrpcStatusCode::InvalidArgument
+                | GrpcStatusCode::FailedPrecondition
+                | GrpcStatusCode::OutOfRange
                 | GrpcStatusCode::Internal => {
                     variants.push(format!("  {}(string),", code.to_wit_variant_name()));
                 }
@@ -166,10 +163,7 @@ impl GrpcStatusCode {
                 }
             }
         }
-        
-        format!(
-            "variant grpc-error {{\n{}\n}}",
-            variants.join("\n")
-        )
+
+        format!("variant grpc-error {{\n{}\n}}", variants.join("\n"))
     }
 }
