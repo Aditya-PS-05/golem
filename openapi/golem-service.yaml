@@ -8729,9 +8729,11 @@ components:
         propertyName: type
         mapping:
           WasmRpc: '#/components/schemas/DynamicLinkedInstance_DynamicLinkedWasmRpc'
+          Grpc: '#/components/schemas/DynamicLinkedInstance_DynamicLinkedGrpc'
       type: object
       oneOf:
       - $ref: '#/components/schemas/DynamicLinkedInstance_DynamicLinkedWasmRpc'
+      - $ref: '#/components/schemas/DynamicLinkedInstance_DynamicLinkedGrpc'
     DynamicLinkedInstance_DynamicLinkedWasmRpc:
       allOf:
       - type: object
@@ -8744,6 +8746,29 @@ components:
         required:
         - type
       - $ref: '#/components/schemas/DynamicLinkedWasmRpc'
+    DynamicLinkedInstance_DynamicLinkedGrpc:
+      allOf:
+      - type: object
+        properties:
+          type:
+            example: Grpc
+            type: string
+            enum:
+            - Grpc
+        required:
+        - type
+      - $ref: '#/components/schemas/DynamicLinkedGrpc'
+    DynamicLinkedGrpc:
+      title: DynamicLinkedGrpc
+      type: object
+      properties:
+        targets:
+          description: Maps resource names within the dynamic linked interface to gRPC target information
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/GrpcTarget'
+      required:
+      - targets
     DynamicLinkedWasmRpc:
       title: DynamicLinkedWasmRpc
       type: object
@@ -9357,6 +9382,140 @@ components:
       - interfaceName
       - componentName
       - componentType
+    GrpcTarget:
+      title: GrpcTarget
+      type: object
+      properties:
+        endpoint:
+          type: string
+          description: gRPC server endpoint (host:port)
+        package:
+          type: string
+          description: Protobuf package name
+        serviceName:
+          type: string
+          description: gRPC service name
+        version:
+          type: string
+          description: Service version
+        auth:
+          $ref: '#/components/schemas/GrpcAuthConfig'
+          description: Authentication configuration
+        tls:
+          type: boolean
+          description: Whether to use TLS encryption
+        timeout:
+          type: integer
+          format: int64
+          description: Request timeout in milliseconds
+      required:
+      - endpoint
+      - package
+      - serviceName
+      - version
+      - tls
+      - timeout
+    GrpcAuthConfig:
+      title: GrpcAuthConfig
+      discriminator:
+        propertyName: type
+        mapping:
+          Bearer: '#/components/schemas/GrpcAuthConfig_BearerAuth'
+          Basic: '#/components/schemas/GrpcAuthConfig_BasicAuth'
+          ApiKey: '#/components/schemas/GrpcAuthConfig_ApiKeyAuth'
+          None: '#/components/schemas/GrpcAuthConfig_EmptyAuth'
+      type: object
+      oneOf:
+      - $ref: '#/components/schemas/GrpcAuthConfig_BearerAuth'
+      - $ref: '#/components/schemas/GrpcAuthConfig_BasicAuth'
+      - $ref: '#/components/schemas/GrpcAuthConfig_ApiKeyAuth'
+      - $ref: '#/components/schemas/GrpcAuthConfig_EmptyAuth'
+    GrpcAuthConfig_BearerAuth:
+      allOf:
+      - type: object
+        properties:
+          type:
+            example: Bearer
+            type: string
+            enum:
+            - Bearer
+        required:
+        - type
+      - $ref: '#/components/schemas/BearerAuth'
+    GrpcAuthConfig_BasicAuth:
+      allOf:
+      - type: object
+        properties:
+          type:
+            example: Basic
+            type: string
+            enum:
+            - Basic
+        required:
+        - type
+      - $ref: '#/components/schemas/BasicAuth'
+    GrpcAuthConfig_ApiKeyAuth:
+      allOf:
+      - type: object
+        properties:
+          type:
+            example: ApiKey
+            type: string
+            enum:
+            - ApiKey
+        required:
+        - type
+      - $ref: '#/components/schemas/ApiKeyAuth'
+    GrpcAuthConfig_EmptyAuth:
+      allOf:
+      - type: object
+        properties:
+          type:
+            example: None
+            type: string
+            enum:
+            - None
+        required:
+        - type
+      - $ref: '#/components/schemas/EmptyAuth'
+    EmptyAuth:
+      title: EmptyAuth
+      type: object
+    BearerAuth:
+      title: BearerAuth
+      type: object
+      properties:
+        token:
+          type: string
+          description: Bearer token value
+      required:
+      - token
+    BasicAuth:
+      title: BasicAuth
+      type: object
+      properties:
+        username:
+          type: string
+          description: Username for basic authentication
+        password:
+          type: string
+          description: Password for basic authentication
+      required:
+      - username
+      - password
+    ApiKeyAuth:
+      title: ApiKeyAuth
+      type: object
+      properties:
+        key:
+          type: string
+          description: API key value
+        header:
+          type: string
+          description: Header name for the API key
+      required:
+      - key
+      - header
     ActivatePluginParameters:
       title: ActivatePluginParameters
       type: object

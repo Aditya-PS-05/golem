@@ -266,7 +266,7 @@ tokio-stream = { version = "0.1", features = ["sync"] }
 tokio-tungstenite = { version = "0.25.0" }
 tokio-util = "0.7.13"
 toml = "0.8.20"
-tonic = { version = "0.12.3", features = ["gzip"] }
+tonic = { version = "0.12.3", features = ["gzip", "tls"] }
 tonic-reflection = "0.12.3"
 tonic-health = "0.12.3"
 tracing = { version = "0.1.41", features = ["log"] }

@@ -1273,11 +1273,60 @@ fn to_http_dynamic_linking(
                             },
                         ),
                     )),
-                    DynamicLinkedInstance::Grpc(_grpc_link) => {
-                        // TODO: Add Grpc support to golem-client model generation
-                        // For now, skip gRPC dynamic linking in tests
-                        None
-                    }
+                    DynamicLinkedInstance::Grpc(grpc_link) => Some((
+                        k.clone(),
+                        golem_client::model::DynamicLinkedInstance::Grpc(
+                            golem_client::model::DynamicLinkedGrpc {
+                                targets: grpc_link
+                                    .targets
+                                    .iter()
+                                    .map(|(key, target)| {
+                                        (
+                                            key.clone(),
+                                            golem_client::model::GrpcTarget {
+                                                endpoint: target.endpoint.clone(),
+                                                package: target.package.clone(),
+                                                service_name: target.service_name.clone(),
+                                                version: target.version.clone(),
+                                                auth: target.auth.as_ref().map(|auth| match auth {
+                                                    golem_common::model::component_metadata::GrpcAuthConfig::Bearer(bearer) => {
+                                                        golem_client::model::GrpcAuthConfig::Bearer(
+                                                            golem_client::model::BearerAuth {
+                                                                token: bearer.token.clone(),
+                                                            }
+                                                        )
+                                                    },
+                                                    golem_common::model::component_metadata::GrpcAuthConfig::Basic(basic) => {
+                                                        golem_client::model::GrpcAuthConfig::Basic(
+                                                            golem_client::model::BasicAuth {
+                                                                username: basic.username.clone(),
+                                                                password: basic.password.clone(),
+                                                            }
+                                                        )
+                                                    },
+                                                    golem_common::model::component_metadata::GrpcAuthConfig::ApiKey(api_key) => {
+                                                        golem_client::model::GrpcAuthConfig::ApiKey(
+                                                            golem_client::model::ApiKeyAuth {
+                                                                key: api_key.key.clone(),
+                                                                header: api_key.header.clone(),
+                                                            }
+                                                        )
+                                                    },
+                                                    golem_common::model::component_metadata::GrpcAuthConfig::None(_) => {
+                                                        golem_client::model::GrpcAuthConfig::None(
+                                                            golem_client::model::EmptyAuth {}
+                                                        )
+                                                    },
+                                                }),
+                                                tls: target.tls,
+                                                timeout: target.timeout as i64,
+                                            }
+                                        )
+                                    })
+                                    .collect(),
+                            },
+                        ),
+                    ))
                 }
             })
             .collect(),
